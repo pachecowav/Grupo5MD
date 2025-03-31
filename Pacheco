@@ -1,1 +1,148 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define MAX_STUDENTS 1000
+#define MAX_ITERATIONS 100
+#define K 3  // Número de clusters
+
+// Estructura para almacenar los datos de los estudiantes
+typedef struct {
+    int student_id;
+    int age;
+    float attendance;
+    float midterm_score;
+    float final_score;
+    float total_score;
+    float stress_level;
+    int cluster; // Grupo al que pertenece
+} Student;
+
+// Estructura para los centroides
+typedef struct {
+    float age;
+    float attendance;
+    float midterm_score;
+    float final_score;
+    float total_score;
+    float stress_level;
+} Centroid;
+
+Student students[MAX_STUDENTS];
+Centroid centroids[K];
+int num_students = 0;
+
+// Función para cargar datos desde un archivo CSV
+void load_data(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        printf("No se pudo abrir el archivo.\n");
+        exit(1);
+    }
+    char line[1024];
+    fgets(line, sizeof(line), file); // Leer encabezado y descartarlo
+    while (fgets(line, sizeof(line), file)) {
+        sscanf(line, "%d,%*[^,],%*[^,],%*[^,],%*[^,],%d,%*[^,],%f,%f,%f,%*f,%*f,%*f,%*f,%f,%*[^,],%*f,%*[^,],%*[^,],%*[^,],%*f,%f", 
+               &students[num_students].student_id,
+               &students[num_students].age,
+               &students[num_students].attendance,
+               &students[num_students].midterm_score,
+               &students[num_students].final_score,
+               &students[num_students].total_score,
+               &students[num_students].stress_level);
+        students[num_students].cluster = -1;
+        num_students++;
+    }
+    fclose(file);
+}
+
+// Función para inicializar los centroides aleatoriamente
+void initialize_centroids() {
+    for (int i = 0; i < K; i++) {
+        int index = rand() % num_students;
+        centroids[i].age = students[index].age;
+        centroids[i].attendance = students[index].attendance;
+        centroids[i].midterm_score = students[index].midterm_score;
+        centroids[i].final_score = students[index].final_score;
+        centroids[i].total_score = students[index].total_score;
+        centroids[i].stress_level = students[index].stress_level;
+    }
+}
+
+// Función para calcular la distancia euclidiana
+float euclidean_distance(Student s, Centroid c) {
+    return sqrt(pow(s.age - c.age, 2) +
+                pow(s.attendance - c.attendance, 2) +
+                pow(s.midterm_score - c.midterm_score, 2) +
+                pow(s.final_score - c.final_score, 2) +
+                pow(s.total_score - c.total_score, 2) +
+                pow(s.stress_level - c.stress_level, 2));
+}
+
+// Función para asignar cada estudiante al cluster más cercano
+void assign_clusters() {
+    for (int i = 0; i < num_students; i++) {
+        float min_dist = INFINITY;
+        int cluster = 0;
+        for (int j = 0; j < K; j++) {
+            float dist = euclidean_distance(students[i], centroids[j]);
+            if (dist < min_dist) {
+                min_dist = dist;
+                cluster = j;
+            }
+        }
+        students[i].cluster = cluster;
+    }
+}
+
+// Función para actualizar los centroides
+void update_centroids() {
+    int cluster_counts[K] = {0};
+    Centroid new_centroids[K] = {0};
+    
+    for (int i = 0; i < num_students; i++) {
+        int cluster = students[i].cluster;
+        new_centroids[cluster].age += students[i].age;
+        new_centroids[cluster].attendance += students[i].attendance;
+        new_centroids[cluster].midterm_score += students[i].midterm_score;
+        new_centroids[cluster].final_score += students[i].final_score;
+        new_centroids[cluster].total_score += students[i].total_score;
+        new_centroids[cluster].stress_level += students[i].stress_level;
+        cluster_counts[cluster]++;
+    }
+    
+    for (int i = 0; i < K; i++) {
+        if (cluster_counts[i] > 0) {
+            centroids[i].age = new_centroids[i].age / cluster_counts[i];
+            centroids[i].attendance = new_centroids[i].attendance / cluster_counts[i];
+            centroids[i].midterm_score = new_centroids[i].midterm_score / cluster_counts[i];
+            centroids[i].final_score = new_centroids[i].final_score / cluster_counts[i];
+            centroids[i].total_score = new_centroids[i].total_score / cluster_counts[i];
+            centroids[i].stress_level = new_centroids[i].stress_level / cluster_counts[i];
+        }
+    }
+}
+
+// Función principal de K-means
+void kmeans() {
+    initialize_centroids();
+    for (int i = 0; i < MAX_ITERATIONS; i++) {
+        assign_clusters();
+        update_centroids();
+    }
+}
+
+// Función para imprimir los resultados
+void print_results() {
+    for (int i = 0; i < num_students; i++) {
+        printf("Student ID: %d -> Cluster %d\n", students[i].student_id, students[i].cluster);
+    }
+}
+
+int main() {
+    load_data("students.csv");
+    kmeans();
+    print_results();
+    return 0;
+}
 
