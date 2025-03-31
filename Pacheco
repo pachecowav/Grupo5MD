@@ -140,7 +140,7 @@ void print_results() {
 }
 
 int main() {
-    load_data("students.csv");
+    load_data("datos.csv");
     kmeans();
     print_results();
     return 0;
